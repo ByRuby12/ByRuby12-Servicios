@@ -9,16 +9,16 @@ ensureSiteSettings();
 const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 const finePointer=window.matchMedia('(hover:hover) and (pointer:fine)');
 const SHOWCASE = [
-  ['web-profesional','Web profesional','Una primera impresión que cuenta.'],
-  ['tienda-online','Tienda online','De la visita al siguiente pedido.'],
-  ['pack-creador','Pack Creador','Tu identidad, en todo tu universo.'],
-  ['publicidad','Tu marca, a lo grande','Ideas que también salen a la calle.'],
-  ['carta-digital','Carta digital','Tu local, al alcance de una pantalla.'],
-  ['promociones','Diseño de promociones','Haz que tu próxima oferta destaque.'],
-  ['contactos','Contactos para tu negocio','Oportunidades organizadas para trabajar con claridad.','svg'],
-  ['mantenimiento','Mantenimiento web','Una web cuidada, actualizada y lista para seguir creciendo.','svg'],
-  ['carteles','Carteles, flyers y cartas','Piezas gráficas pensadas para destacar.','svg'],
-  ['retoque','Retoque y edición','Una nueva mirada para tus fotografías.','svg']
+  ['01_tienda_online','Tienda online','Un escaparate digital listo para vender.'],
+  ['02_web_profesional','Web profesional','Una web a medida para presentar tu negocio.'],
+  ['03_marca_redes','Tu marca lista para redes','Identidad visual y diseños para tus canales.'],
+  ['04_contactos','Contactos para tu negocio','Información organizada para buscar oportunidades.'],
+  ['05_mantenimiento','Mantenimiento web','Mejoras y contenido al día para tu web.'],
+  ['06_universal_works','Universal Works','Una solución web adaptable a negocios locales.'],
+  ['07_carteles','Carteles, flyers y cartas','Diseño gráfico para promociones, eventos y cartas.'],
+  ['08_local_digital','Tu local, ahora en digital','Tu carta y tus pedidos, también en el móvil.'],
+  ['09_retoque','Retoque y edición de fotos','Una nueva mirada para tus fotografías.'],
+  ['10_gran_formato','Tu marca, a lo grande','Publicidad que destaca en la calle.']
 ];
 const SERVICE_IMAGES={
   ecommerce:[
@@ -128,8 +128,32 @@ function render(){
       &&(!searchTerm||normalizeSearch(service.title+' '+service.category+' '+service.desc+' '+service.bullets.join(' ')).includes(searchTerm)))
     .forEach(service=>{
       const card=el('article','service reveal');
+      let tiltFrame=0,pointerX=0,pointerY=0;
+      card.addEventListener('pointermove',event=>{
+        if(!finePointer.matches||reduceMotion.matches||event.pointerType!=='mouse')return;
+        pointerX=event.clientX;
+        pointerY=event.clientY;
+        if(tiltFrame)return;
+        tiltFrame=requestAnimationFrame(()=>{
+          tiltFrame=0;
+          const bounds=card.getBoundingClientRect();
+          const x=(pointerX-bounds.left)/bounds.width;
+          const y=(pointerY-bounds.top)/bounds.height;
+          card.classList.add('is-tilting');
+          card.style.setProperty('--tilt-x',((x-.5)*8).toFixed(2)+'deg');
+          card.style.setProperty('--tilt-y',((.5-y)*8).toFixed(2)+'deg');
+        });
+      },{passive:true});
+      card.addEventListener('pointerleave',()=>{
+        if(tiltFrame)cancelAnimationFrame(tiltFrame);
+        tiltFrame=0;
+        card.classList.remove('is-tilting');
+        card.style.removeProperty('--tilt-x');
+        card.style.removeProperty('--tilt-y');
+      });
       const button=el('button','service-link');
       button.setAttribute('aria-label','Ver detalles de '+service.title);
+      button.dataset.cursor='VER';
       button.style.display='contents';
       const visual=el('div','visual');
       const cover=serviceCover(service);
@@ -181,8 +205,10 @@ contactForm.addEventListener('input',updateMail);
 contactForm.addEventListener('change',updateMail);
 const contactStatus=$('#contact-status');
 const contactGmailFallback=$('#contact-gmail-fallback');
+let contactStatusTimer;
 contactForm.addEventListener('submit',async event=>{
   event.preventDefault();
+  clearTimeout(contactStatusTimer);
   const submit=$('#contact-mail');
   submit.disabled=true;
   submit.setAttribute('aria-busy','true');
@@ -216,8 +242,8 @@ contactForm.addEventListener('submit',async event=>{
   try{
     const response=await fetch('https://formsubmit.co/ajax/'+encodeURIComponent(catalog.email),{
       method:'POST',
-      headers:{'Content-Type':'application/json',Accept:'application/json'},
-      body:JSON.stringify(data)
+      headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8',Accept:'application/json'},
+      body:new URLSearchParams(data).toString()
     });
     const result=await response.json();
     if(!response.ok||String(result.success)!=='true'){
@@ -225,11 +251,16 @@ contactForm.addEventListener('submit',async event=>{
       if(/activat|confirm/i.test(message))throw Error('FormSubmit indica que falta confirmar la activación del formulario desde el correo que te enviaron.');
       throw Error(message||'FormSubmit no pudo aceptar la consulta. Inténtalo otra vez.');
     }
+    const replyAddress=String(data.email);
     contactForm.reset();
     updateMail();
     contactGmailFallback.hidden=true;
     contactStatus.classList.add('success');
-    contactStatus.textContent='¡Consulta enviada! Gracias; te responderé en cuanto pueda.';
+    contactStatus.textContent='Consulta enviada. Te responderé por correo a '+replyAddress+'. Revisa también spam.';
+    contactStatusTimer=setTimeout(()=>{
+      contactStatus.textContent='';
+      contactStatus.classList.remove('success');
+    },7000);
   }catch(error){
     console.error('No se pudo enviar la consulta de contacto:',error);
     contactStatus.classList.add('error');
@@ -430,8 +461,8 @@ function renderShowcase() {
   gallery.scrollLeft=0;
   gallery.style.scrollBehavior='';
   gallery.replaceChildren();
-  SHOWCASE.forEach(([id,title,description,extension='webp'], index) => {
-    const src = 'assets/showcase/' + id + '.' + extension;
+  SHOWCASE.forEach(([id,title,description], index) => {
+    const src = 'assets/showcase/' + id + '.webp';
     const button = el('button','gallery-shot');
     button.setAttribute('aria-label', 'Ampliar ejemplo ilustrativo: ' + title);
     button.dataset.cursor = 'VER';
