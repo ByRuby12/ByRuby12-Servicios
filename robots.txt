@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://byruby12.github.io/ByRuby12-Servicios/sitemap.xml
