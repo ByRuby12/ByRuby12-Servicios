@@ -1,9 +1,9 @@
-/* ByRuby12 — catálogo, editor local, interacciones y exportación. */
+/* ByRuby12 — catálogo e interacciones. */
 
 'use strict';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const DEFAULT_SITE_SETTINGS={hoursDays:'Lunes a viernes',hoursTime:'10:00–18:00',cvUrl:'assets/docs/CV%20TOMAS%2020262027%20NEW.pdf',portfolioUrl:'https://byruby12.github.io/Portfolio-Tomas/',faqTheme:'sand',typeface:'editorial',socials:{youtube:'https://www.youtube.com/@ByRuby12',instagram:'https://instagram.com/ByRuby12',x:'https://twitter.com/byruby12',twitch:'https://twitch.com/byruby12_tv',tiktok:'http://vm.tiktok.com/byruby12',discord:'https://discord.gg/yV68Vz78tA',github:'https://github.com/ByRuby12',paypal:'https://www.paypal.me/ByRuby12'}};
-let catalog=JSON.parse($('#catalog-data').textContent), activeFilter='Todos', searchTerm='', selectedId=null, imageIndex=0, editId=null, audioContext=null, audioOn=false, toastTimer, db=null;
+let catalog=JSON.parse($('#catalog-data').textContent), activeFilter='Todos', searchTerm='', selectedId=null, imageIndex=0, audioContext=null, audioOn=false, toastTimer;
 function ensureSiteSettings(){const saved=catalog.siteSettings&&typeof catalog.siteSettings==='object'&&!Array.isArray(catalog.siteSettings)?catalog.siteSettings:{};const socials=saved.socials&&typeof saved.socials==='object'&&!Array.isArray(saved.socials)?saved.socials:{};catalog.siteSettings={...DEFAULT_SITE_SETTINGS,...saved,socials:{...DEFAULT_SITE_SETTINGS.socials,...socials}}}
 ensureSiteSettings();
 const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -97,7 +97,6 @@ const SERVICE_IMAGES={
     'assets/imagenes/marca-grande/06-Elige tu pack de diseño publicitario-6.png'
   ]
 };
-const SOURCE=document.documentElement.outerHTML;
 const safeImage=s=>typeof s==='string'&&(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(s)||/^assets\/(?:[a-z0-9_-]+\/)*[^/\\?#]+\.(?:webp|png|jpe?g)$/i.test(s));
 function applyDefaultServiceImages(){
   catalog.services.forEach(service=>{
@@ -307,10 +306,7 @@ $('#gallery-next').onclick=()=>moveShowcase(1);
 $('#gallery').addEventListener('scroll',updateShowcaseControls,{passive:true});
 window.addEventListener('resize',updateShowcaseControls,{passive:true});
 $$('[data-close]').forEach(b=>b.onclick=()=>$('#'+b.dataset.close).close());$$('dialog').forEach(d=>d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()}}));document.addEventListener('keydown',e=>{if($('#detail').open){if(e.key==='ArrowRight')slide(1);if(e.key==='ArrowLeft')slide(-1)}});
-async function initDB(){try{db=await new Promise((res,rej)=>{const req=indexedDB.open('byruby12-catalog-v1',1);req.onupgradeneeded=()=>req.result.createObjectStore('catalog');req.onsuccess=()=>res(req.result);req.onerror=()=>rej(req.error)});const saved=await new Promise((res,rej)=>{const q=db.transaction('catalog').objectStore('catalog').get('current');q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)});if(saved&&saved.updated>catalog.updated){validateCatalog(saved);catalog=migrateMedia(saved)}}catch(e){$('#admin-status').textContent='Almacenamiento local no disponible. Descarga la web o una copia JSON para conservar los cambios.'}applyDefaultServiceImages();ensureSiteSettings();loadSiteSettingsEditor();render();applySiteSettings()}
-async function save(){applySiteSettings();catalog.updated=Date.now();if(!db){toast('Descarga una copia para conservar los cambios');return}try{await new Promise((res,rej)=>{const t=db.transaction('catalog','readwrite');t.objectStore('catalog').put(catalog,'current');t.oncomplete=res;t.onerror=()=>rej(t.error)});$('#admin-status').textContent='Guardado en este navegador · '+new Date().toLocaleTimeString('es-ES');}catch{toast('No se pudo guardar localmente. Descarga una copia ahora.')}}
-function editorList(){const list=$('#editor-list');list.replaceChildren();catalog.services.forEach(s=>{const b=el('button',s.id===editId?'active':'',s.title);b.onclick=()=>loadEditor(s.id);list.append(b)})}
-function loadEditor(id){editId=id;const s=catalog.services.find(s=>s.id===id);const f=$('#editor-form');['title','category','price','tag','desc','note'].forEach(k=>f.elements[k].value=s[k]||'');f.elements.bullets.value=s.bullets.join('\n');f.elements.visible.checked=s.visible!==false;editorList();editorImages()}
+function initSite(){applyDefaultServiceImages();ensureSiteSettings();render();applySiteSettings()}
 function applySiteSettings(){
   ensureSiteSettings();
   const settings=catalog.siteSettings,email=catalog.email;
@@ -328,75 +324,6 @@ function applySiteSettings(){
   $('[data-site-portfolio]').href=settings.portfolioUrl;
   Object.entries(settings.socials).forEach(([name,url])=>{const link=$(`[data-site-social="${name}"]`);if(link)link.href=url});
 }
-function loadSiteSettingsEditor(){
-  const form=$('.admin-settings-form');
-  if(!form)return;
-  form.elements.email.value=catalog.email;
-  Object.entries(catalog.siteSettings).forEach(([name,value])=>{if(typeof value==='string'&&form.elements[name])form.elements[name].value=value});
-  Object.entries(catalog.siteSettings.socials).forEach(([name,value])=>{if(form.elements['social-'+name])form.elements['social-'+name].value=value});
-}
-function addSiteSettingsEditor(){
-  const details=el('details','admin-settings'),summary=el('summary','', 'Ajustes de la web');
-  const intro=el('p','admin-settings-intro','Actualiza los datos del pie y el aspecto general. Al guardar se conservan en este navegador; expórtalos para incorporarlos al HTML.');
-  const form=el('form','admin-settings-form');
-  const addField=(title,name,value,type='text',maxLength=100)=>{
-    const label=el('label','field',title),input=el('input');
-    input.name=name;input.type=type;input.value=value;input.maxLength=maxLength;input.required=true;
-    label.append(input);form.append(label);
-  };
-  addField('Email de contacto','email',catalog.email,'email',120);
-  addField('Días de atención','hoursDays',catalog.siteSettings.hoursDays,'text',60);
-  addField('Horario','hoursTime',catalog.siteSettings.hoursTime,'text',50);
-  addField('Enlace al CV (PDF)','cvUrl',catalog.siteSettings.cvUrl,'text',240);
-  addField('Enlace al portfolio','portfolioUrl',catalog.siteSettings.portfolioUrl,'url',240);
-  const socialTitles={youtube:'YouTube',instagram:'Instagram',x:'X / Twitter',twitch:'Twitch',tiktok:'TikTok',discord:'Discord',github:'GitHub',paypal:'PayPal'};
-  Object.entries(socialTitles).forEach(([name,title])=>addField('Enlace · '+title,'social-'+name,catalog.siteSettings.socials[name],'url',240));
-  const faqLabel=el('label','field','Fondo de preguntas frecuentes'),faqTheme=el('select');
-  faqTheme.name='faqTheme';[['sand','Arena'],['lavender','Lavanda'],['ice','Azul suave']].forEach(([value,label])=>faqTheme.add(new Option(label,value)));
-  faqTheme.value=catalog.siteSettings.faqTheme;faqLabel.append(faqTheme);form.append(faqLabel);
-  const fontLabel=el('label','field','Tipografía'),typeface=el('select');
-  typeface.name='typeface';[['editorial','Editorial · títulos con carácter'],['clean','Limpia · sistema']].forEach(([value,label])=>typeface.add(new Option(label,value)));
-  typeface.value=catalog.siteSettings.typeface;fontLabel.append(typeface);form.append(fontLabel);
-  const submit=el('button','btn','Guardar ajustes ✓');submit.type='submit';form.append(submit);
-  form.onsubmit=async event=>{
-    event.preventDefault();
-    const data=new FormData(form),cvUrl=String(data.get('cvUrl')).trim(),portfolioUrl=String(data.get('portfolioUrl')).trim();
-    const validCv=validCvLink(cvUrl);
-    const socials=Object.keys(socialTitles).reduce((result,name)=>{result[name]=String(data.get('social-'+name)).trim();return result},{});
-    if(!validCv||!validWebLink(portfolioUrl)||Object.values(socials).some(url=>!validWebLink(url))){toast('Revisa los enlaces: usa URLs HTTP o HTTPS válidas y un CV PDF.');return}
-    catalog.email=String(data.get('email')).trim();
-    catalog.siteSettings={hoursDays:String(data.get('hoursDays')).trim(),hoursTime:String(data.get('hoursTime')).trim(),cvUrl,portfolioUrl,faqTheme:String(data.get('faqTheme')),typeface:String(data.get('typeface')),socials};
-    applySiteSettings();await save();toast('Ajustes guardados. Expórtalos para publicar los cambios.');
-  };
-  details.append(summary,intro,form);
-  $('#editor .modal-body').insertBefore(details,$('#editor .editor-grid'));
-  loadSiteSettingsEditor();
-}
-addSiteSettingsEditor();
-function editorImages(){const c=$('#editor-images');c.replaceChildren();const s=catalog.services.find(s=>s.id===editId);s.images.forEach((src,i)=>{const item=el('div','image-edit'),im=el('img');im.src=src;im.alt='Imagen '+(i+1);const up=el('button','',i===0?'Portada':'← Portada');up.disabled=i===0;up.onclick=async()=>{s.images.splice(i,1);s.images.unshift(src);await save();editorImages();render()};const del=el('button','','Quitar');del.onclick=async()=>{s.images.splice(i,1);await save();editorImages();render()};item.append(im,up,del);c.append(item)})}
-$('#editor-form').onsubmit=async e=>{e.preventDefault();const s=catalog.services.find(s=>s.id===editId),f=e.target;['title','price','tag','desc','note','category'].forEach(k=>s[k]=f.elements[k].value.trim());s.bullets=f.elements.bullets.value.split('\n').map(x=>x.trim()).filter(Boolean);s.visible=f.elements.visible.checked;await save();render();editorList();toast('Ficha guardada')};
-async function readImage(file){if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw Error('Utiliza JPG, PNG o WebP.');if(file.size>20*1024*1024)throw Error('La imagen supera los 20 MB.');const bitmap=await createImageBitmap(file);if(bitmap.width*bitmap.height>80000000){bitmap.close();throw Error('Imagen demasiado grande. Exporta una versión más pequeña.')}const scale=Math.min(1,1600/Math.max(bitmap.width,bitmap.height)),canvas=document.createElement('canvas');canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();return canvas.toDataURL('image/webp',.88)}
-$('#image-upload').onchange=async e=>{const s=catalog.services.find(s=>s.id===editId);try{toast('Optimizando imágenes…');for(const file of e.target.files){s.images.push(await readImage(file))}await save();editorImages();render();toast('Imágenes añadidas')}catch(err){toast(err.message)}e.target.value=''};
-$('#add-service').onclick=async()=>{const id='servicio-'+Date.now();catalog.services.push({id,title:'Nuevo servicio',category:'Diseño y marca',price:'Consultar',tag:'Nuevo',desc:'Describe aquí tu nuevo servicio.',bullets:[],note:'Alcance y plazo a confirmar.',images:[],visible:false,icon:'✳'});await save();loadEditor(id);render();toast('Nueva ficha creada. Activa «Mostrar» cuando esté lista.')};
-function download(name,content,type){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([content],{type}));a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
-function serialized(){return JSON.stringify(catalog).replace(/</g,'\\u003c')}
-function exportHTML(){const d=new DOMParser().parseFromString('<!doctype html>'+SOURCE,'text/html');d.querySelector('#catalog-data').textContent=serialized();d.querySelectorAll('dialog').forEach(x=>x.removeAttribute('open'));return '<!doctype html>\n'+d.documentElement.outerHTML}
-$('#export-site').onclick=()=>{download('index.html',exportHTML(),'text/html;charset=utf-8');toast('index.html exportado. Conserva CSS, JS y assets junto a él.')};$('#export-data').onclick=()=>download('byruby12-catalogo.json',JSON.stringify(catalog,null,2),'application/json');
-function validWebLink(value){try{return ['http:','https:'].includes(new URL(value).protocol)}catch{return false}}
-function validCvLink(value){if(/^assets\/docs\/[A-Za-z0-9_%.-]+\.pdf$/i.test(value))return true;try{const url=new URL(value);return url.protocol==='https:'&&url.pathname.toLowerCase().endsWith('.pdf')}catch{return false}}
-function validateCatalog(c){
-  if(!c||c.version!==1||!Array.isArray(c.services)||!c.services.length||c.services.length>100||typeof c.email!=='string'||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))throw Error('Copia de catálogo no válida.');
-  if(c.siteSettings){
-    const settings=c.siteSettings;
-    if(typeof settings!=='object'||Array.isArray(settings)||['hoursDays','hoursTime','cvUrl','portfolioUrl','faqTheme','typeface'].some(k=>typeof settings[k]!=='string')||!['sand','lavender','ice'].includes(settings.faqTheme)||!['editorial','clean'].includes(settings.typeface)||!validCvLink(settings.cvUrl)||!validWebLink(settings.portfolioUrl))throw Error('Ajustes de la web no válidos.');
-    if(settings.socials&&(typeof settings.socials!=='object'||Array.isArray(settings.socials)||Object.keys(settings.socials).some(key=>!Object.hasOwn(DEFAULT_SITE_SETTINGS.socials,key))||Object.values(settings.socials).some(url=>typeof url!=='string'||!validWebLink(url))))throw Error('Enlaces de redes no válidos.');
-  }
-  const ids=new Set();
-  for(const s of c.services){if(!s||typeof s.id!=='string'||ids.has(s.id))throw Error('Identificadores no válidos');ids.add(s.id);for(const k of ['title','category','price','tag','desc','note'])if(typeof s[k]!=='string')throw Error('Ficha incompleta');if(!['Web y tecnología','Diseño y marca','Datos y negocio'].includes(s.category)||!Array.isArray(s.bullets)||s.bullets.some(x=>typeof x!=='string')||!Array.isArray(s.images)||s.images.some(x=>!safeImage(x)))throw Error('Formato de ficha no válido.')}
-}
-$('#import-data').onclick=()=>$('#import-file').click();$('#import-file').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>80*1024*1024)throw Error('La copia supera los 80 MB.');const c=JSON.parse(await f.text());validateCatalog(c);if(!confirm('¿Sustituir el catálogo actual por esta copia? Descarga antes una copia si quieres conservarlo.'))return;catalog=migrateMedia(c);await save();loadEditor(catalog.services[0].id);render();toast('Copia importada')}catch(err){toast(err.message)}e.target.value=''};
-
-
 /* ── Motion, navegación y accesibilidad ──────────────────────── */
 $('#service-search').addEventListener('input',e=>{searchTerm=normalizeSearch(e.target.value.trim());render()});
 const menu=$('#mobile-menu'),mobileNav=$('#mobile-nav');
@@ -420,7 +347,7 @@ document.addEventListener('click',e=>{
 });
 
 /* Apertura de diálogos con animación progresiva, sin interferir con Escape. */
-for(const id of ['detail','lightbox','editor']){
+for(const id of ['detail','lightbox']){
   const d=$('#'+id),nativeShow=d.showModal.bind(d);
   d.showModal=()=>{nativeShow();if(!reduceMotion.matches&&d.animate)d.animate([{opacity:0,transform:'translateY(20px) scale(.97)'},{opacity:1,transform:'translateY(0) scale(1)'}],{duration:320,easing:'cubic-bezier(.16,1,.3,1)'})};
 }
@@ -450,7 +377,7 @@ function initAmbientMotion(){
   document.addEventListener('visibilitychange',update);
 }
 $('#year').textContent=new Date().getFullYear();
-watch();renderShowcase();initDB().then(()=>{if(new URLSearchParams(location.search).get('admin')==='1'){loadEditor(catalog.services[0].id);$('#editor').showModal()}});updateScroll();startParticles();initAmbientMotion();
+watch();renderShowcase();initSite();updateScroll();startParticles();initAmbientMotion();
 
 
 /* Galería editorial independiente de las imágenes del catálogo. */
@@ -475,14 +402,6 @@ function renderShowcase() {
   });
   requestAnimationFrame(updateShowcaseControls);
 }
-function migrateMedia(data) {
-  if(data.mediaLayoutVersion !== 3) {
-    data.services.forEach(service=>service.images=(service.images||[]).filter(src=>!src.startsWith('assets/services/')));
-    data.mediaLayoutVersion=3;
-  }
-  return data;
-}
-
 /* Agrupa los efectos del puntero para actualizar el DOM como máximo una vez por frame. */
 function initPointerEffects() {
   const cursor=$('#ruby-cursor');
