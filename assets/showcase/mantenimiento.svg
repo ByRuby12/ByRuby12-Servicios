@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="880" viewBox="0 0 1280 880">
+  <defs>
+    <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#eae4d7"/><stop offset="1" stop-color="#c9d0c0"/></linearGradient>
+    <linearGradient id="accent"><stop stop-color="#e9773c"/><stop offset="1" stop-color="#f8b96c"/></linearGradient>
+    <filter id="shadow" x="-.2" y="-.2" width="1.4" height="1.5"><feDropShadow dx="0" dy="22" stdDeviation="22" flood-color="#30251b" flood-opacity=".2"/></filter>
+  </defs>
+  <rect width="1280" height="880" fill="url(#bg)"/>
+  <circle cx="1095" cy="160" r="205" fill="#fff" opacity=".3"/>
+  <text x="90" y="105" fill="#a6532d" font-family="Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="5">CUIDADO · MEJORA CONTINUA</text>
+  <text x="90" y="180" fill="#252821" font-family="Arial,sans-serif" font-size="52" font-weight="700">Tu web, siempre al día.</text>
+  <text x="90" y="222" fill="#65685f" font-family="Arial,sans-serif" font-size="22">Pequeños cambios, una presencia que sigue creciendo.</text>
+  <g filter="url(#shadow)">
+    <rect x="100" y="290" width="1080" height="475" rx="24" fill="#fffdf8"/>
+    <rect x="100" y="290" width="1080" height="58" rx="24" fill="#252722"/>
+    <path d="M100 324h1080v24H100z" fill="#252722"/>
+    <circle cx="136" cy="319" r="7" fill="#ec7440"/><circle cx="159" cy="319" r="7" fill="#e6bf83"/><circle cx="182" cy="319" r="7" fill="#788072"/>
+    <rect x="310" y="308" width="620" height="22" rx="11" fill="#373a34"/>
+    <text x="590" y="324" fill="#c6c8c0" font-family="Arial,sans-serif" font-size="12">tu-negocio.es</text>
+    <rect x="100" y="348" width="1080" height="417" fill="#f7f4ec"/>
+    <rect x="100" y="348" width="1080" height="52" fill="#fff"/>
+    <text x="142" y="382" fill="#252821" font-family="Arial,sans-serif" font-size="20" font-weight="700">CASA NÓMADA</text>
+    <text x="785" y="381" fill="#68695f" font-family="Arial,sans-serif" font-size="15">Inicio　Servicios　Contacto</text>
+    <rect x="142" y="434" width="500" height="278" rx="14" fill="#d7ddcb"/>
+    <circle cx="380" cy="543" r="88" fill="#b1bda4"/><path d="M205 665 340 530l85 87 70-68 122 163H205Z" fill="#899a7e"/>
+    <circle cx="510" cy="493" r="25" fill="#f2bc70"/>
+    <text x="690" y="480" fill="#a6532d" font-family="Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="3">HECHO PARA DISFRUTAR</text>
+    <text x="690" y="530" fill="#252821" font-family="Arial,sans-serif" font-size="34" font-weight="700">Un lugar con</text>
+    <text x="690" y="570" fill="#252821" font-family="Arial,sans-serif" font-size="34" font-weight="700">algo especial.</text>
+    <text x="690" y="612" fill="#727268" font-family="Arial,sans-serif" font-size="16">Contenido, enlaces y diseño revisados.</text>
+    <rect x="690" y="644" width="174" height="44" rx="22" fill="url(#accent)"/>
+    <text x="720" y="672" fill="#29251f" font-family="Arial,sans-serif" font-size="14" font-weight="700">RESERVA AHORA ↗</text>
+    <rect x="965" y="709" width="177" height="34" rx="17" fill="#e1eddd"/>
+    <circle cx="985" cy="726" r="5" fill="#5b9559"/>
+    <text x="1000" y="731" fill="#496d45" font-family="Arial,sans-serif" font-size="12" font-weight="700">CONTENIDO ACTUALIZADO</text>
+  </g>
+</svg>
